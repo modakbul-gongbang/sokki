@@ -140,6 +140,7 @@ public final class VocabularyStore: @unchecked Sendable {
     private let fileURL: URL
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let lock = NSRecursiveLock()
 
     public init(fileURL: URL) {
         self.fileURL = fileURL
@@ -147,11 +148,15 @@ public final class VocabularyStore: @unchecked Sendable {
     }
 
     public func load() throws -> [VocabularyEntry] {
+        lock.lock()
+        defer { lock.unlock() }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
         return try decoder.decode([VocabularyEntry].self, from: Data(contentsOf: fileURL))
     }
 
     public func save(_ entries: [VocabularyEntry]) throws {
+        lock.lock()
+        defer { lock.unlock() }
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -161,6 +166,8 @@ public final class VocabularyStore: @unchecked Sendable {
 
     @discardableResult
     public func upsert(_ entry: VocabularyEntry) throws -> [VocabularyEntry] {
+        lock.lock()
+        defer { lock.unlock() }
         var entries = try load()
         if let index = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[index] = entry
@@ -173,6 +180,8 @@ public final class VocabularyStore: @unchecked Sendable {
 
     @discardableResult
     public func delete(id: UUID) throws -> [VocabularyEntry] {
+        lock.lock()
+        defer { lock.unlock() }
         let entries = try load().filter { $0.id != id }
         try save(entries)
         return entries
@@ -219,6 +228,7 @@ public final class HistoryStore: @unchecked Sendable {
     public let databaseURL: URL
     public let audioDirectory: URL
     private var db: OpaquePointer?
+    private let lock = NSRecursiveLock()
 
     public init(root: URL) throws {
         self.root = root
@@ -231,10 +241,14 @@ public final class HistoryStore: @unchecked Sendable {
     }
 
     deinit {
+        lock.lock()
         sqlite3_close(db)
+        lock.unlock()
     }
 
     public func add(_ record: HistoryRecord, audioData: Data = Data("fixture-audio".utf8)) throws {
+        lock.lock()
+        defer { lock.unlock() }
         let audioURL = audioDirectory.appendingPathComponent(record.audioFileName)
         try audioData.write(to: audioURL, options: .atomic)
         let sql = """
@@ -257,6 +271,8 @@ public final class HistoryStore: @unchecked Sendable {
     }
 
     public func all() throws -> [HistoryRecord] {
+        lock.lock()
+        defer { lock.unlock() }
         let sql = """
         SELECT id, rawTranscript, finalOutput, mode, status, timestamp, audioFileName
         FROM history
@@ -280,14 +296,23 @@ public final class HistoryStore: @unchecked Sendable {
     }
 
     public func delete(id: UUID) throws {
+        lock.lock()
+        defer { lock.unlock() }
         let records = try all().filter { $0.id == id }
         for record in records {
             try? FileManager.default.removeItem(at: audioDirectory.appendingPathComponent(record.audioFileName))
         }
-        try execute("DELETE FROM history WHERE id = '\(id.uuidString)';")
+        try withStatement("DELETE FROM history WHERE id = ?;") { statement in
+            sqlite3_bind_text(statement, 1, id.uuidString, -1, SQLITE_TRANSIENT)
+            guard sqlite3_step(statement) == SQLITE_DONE else {
+                throw HistoryStoreError.executeFailed(lastError)
+            }
+        }
     }
 
     public func deleteAll() throws {
+        lock.lock()
+        defer { lock.unlock() }
         try execute("DELETE FROM history;")
         if FileManager.default.fileExists(atPath: audioDirectory.path) {
             try FileManager.default.removeItem(at: audioDirectory)
@@ -297,6 +322,8 @@ public final class HistoryStore: @unchecked Sendable {
 
     @discardableResult
     public func applyRetention(days: Int?, now: Date = Date()) throws -> Int {
+        lock.lock()
+        defer { lock.unlock() }
         guard let days else { return 0 }
         let cutoff = now.addingTimeInterval(-Double(days) * 24 * 60 * 60)
         let expired = try all().filter { $0.timestamp < cutoff }
@@ -315,7 +342,8 @@ public final class HistoryStore: @unchecked Sendable {
 
     private func open() throws {
         #if canImport(SQLite3)
-        guard sqlite3_open(databaseURL.path, &db) == SQLITE_OK else {
+        let status = databaseURL.withUnsafeFileSystemRepresentation { sqlite3_open($0, &db) }
+        guard status == SQLITE_OK else {
             throw HistoryStoreError.openFailed(lastError)
         }
         #else

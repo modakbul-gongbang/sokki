@@ -8,8 +8,11 @@
         ".gitignore",
         "Package.swift",
         "README.md",
+        "AppResources",
+        "VoiceSlave.xcodeproj",
         "Sources",
-        "scripts"
+        "scripts",
+        "docs"
       ],
       "exclude": []
     },

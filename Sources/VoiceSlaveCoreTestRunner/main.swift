@@ -137,6 +137,23 @@ let tests: [(String, () throws -> Void)] = [
         try store.delete(id: recent.id)
         try require(try store.all().isEmpty, "delete did not remove row")
     }),
+    ("history SQLite opens paths with spaces and unicode", {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("Voice Slave Tests 한글 \(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try HistoryStore(root: root)
+        let record = HistoryRecord(
+            rawTranscript: "path test",
+            finalOutput: "path test",
+            mode: .dictation,
+            status: .inserted,
+            audioFileName: "path-test.wav"
+        )
+        try store.add(record)
+        try require(try store.all().count == 1, "sqlite path with spaces/unicode failed")
+        try store.delete(id: record.id)
+        try require(try store.all().isEmpty, "delete failed under special path")
+    }),
     ("clipboard restore failure does not fail insertion", {
         let pasteboard = FakePasteboard()
         pasteboard.shouldFailRestore = true

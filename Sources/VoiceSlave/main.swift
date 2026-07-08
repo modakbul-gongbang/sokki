@@ -15,10 +15,17 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate {
     private var overlayWindow: NSWindow?
     private let settings = ObservableSettings()
     private let modeGate = ModeGate()
+    private let launchArguments = Set(CommandLine.arguments.dropFirst())
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         installMenuBar()
+        if launchArguments.contains("--show-settings") {
+            openSettings()
+        }
+        if launchArguments.contains("--show-overlay") {
+            showOverlay(status: "Recording", mode: settings.state.selectedMode.rawValue)
+        }
     }
 
     private func installMenuBar() {
@@ -52,6 +59,7 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate {
                 backing: .buffered,
                 defer: false
             )
+            window.isReleasedWhenClosed = false
             window.title = "VoiceSlave Settings"
             window.contentView = NSHostingView(rootView: SettingsView(settings: settings))
             window.center()
@@ -71,9 +79,9 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate {
         window.level = .floating
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.contentView = NSHostingView(rootView: RecordingOverlay(status: status, mode: mode) {
-            self.overlayWindow?.close()
-            self.overlayWindow = nil
+        window.contentView = NSHostingView(rootView: RecordingOverlay(status: status, mode: mode) { [weak self] in
+            self?.overlayWindow?.close()
+            self?.overlayWindow = nil
         })
         window.center()
         window.makeKeyAndOrderFront(nil)

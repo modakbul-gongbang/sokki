@@ -7,3 +7,4 @@
 # SwiftPM build artifacts
 .build/
 .swiftpm/
+dist/

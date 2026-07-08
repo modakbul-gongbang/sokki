@@ -168,10 +168,15 @@ final class MacTextInsertionClient: TextInsertionClient {
 
     func type(_ value: String) throws {
         for scalar in value.unicodeScalars {
-            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true) else { continue }
+            guard let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true),
+                  let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) else {
+                continue
+            }
             var utf16 = Array(String(scalar).utf16)
-            event.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: &utf16)
-            event.post(tap: .cghidEventTap)
+            keyDown.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: &utf16)
+            keyUp.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: &utf16)
+            keyDown.post(tap: .cghidEventTap)
+            keyUp.post(tap: .cghidEventTap)
         }
     }
 }
