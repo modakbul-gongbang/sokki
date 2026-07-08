@@ -4,7 +4,13 @@
     "baseBranch": "main",
     "branchPrefix": "prd",
     "staging": {
-      "include": [],
+      "include": [
+        ".gitignore",
+        "Package.swift",
+        "README.md",
+        "Sources",
+        "scripts"
+      ],
       "exclude": []
     },
     "ci": {

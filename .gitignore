@@ -3,3 +3,7 @@
 !.hoyeon/config.json
 !.hoyeon/prd/
 !.hoyeon/prd/**
+
+# SwiftPM build artifacts
+.build/
+.swiftpm/
