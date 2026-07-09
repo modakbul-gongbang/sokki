@@ -33,6 +33,10 @@ cat > "$APP_DIR/Contents/PkgInfo" <<'EOF'
 APPL????
 EOF
 
+if [ -n "${APP_VERSION:-}" ]; then
+  plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$APP_DIR/Contents/Info.plist"
+fi
+
 cp AppResources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
 
 codesign --force --sign - \

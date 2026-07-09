@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Run core tests
+        run: ./scripts/test.sh
+
+      - name: Package app bundle
+        run: ./scripts/package-app.sh
+
+      - name: Build DMG
+        id: dmg
+        run: echo "path=$(./scripts/make-dmg.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Sokki $GITHUB_REF_NAME" \
+            --generate-notes \
+            "${{ steps.dmg.outputs.path }}"

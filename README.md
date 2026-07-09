@@ -55,7 +55,18 @@ Sokki is built for exactly that speech, and everything runs on your Mac.
 | 🕘 **Local history** | Searchable SQLite history with optional audio, 30-day auto-cleanup, one-click delete all |
 | ✨ **AI modes (optional)** | Cleanup/Prompt post-processing via OpenAI — transcript-only payloads, key in the macOS Keychain, local fallback on failure |
 
-## Quick Start
+## Install
+
+**The lazy way** — tell your AI agent (Claude Code, Codex, …):
+
+> Install Sokki by following https://github.com/yansfil/sokki/blob/main/INSTALL.md
+
+[`INSTALL.md`](INSTALL.md) is written as an agent install contract: the agent
+does everything end to end and only stops where macOS requires *you* to click
+(permission prompts).
+
+**By hand** — grab the DMG from the [latest release](https://github.com/yansfil/sokki/releases/latest),
+drag `Sokki.app` into Applications, and launch. Or build from source:
 
 ```sh
 git clone https://github.com/yansfil/sokki.git
@@ -71,7 +82,7 @@ start talking. Installed in `/Applications`, the app launches from Spotlight
 like any other app.
 
 > **Unsigned build note** — releases aren't notarized yet. If macOS blocks
-> the app, right-click → Open once, or `xattr -dr com.apple.quarantine dist/Sokki.app`.
+> the app, right-click → Open once, or `xattr -dr com.apple.quarantine /Applications/Sokki.app`.
 
 Full setup, screenshots, and troubleshooting: **[docs/onboarding.md](docs/onboarding.md)**
 
