@@ -1,98 +1,143 @@
+<div align="center">
+
+<img src="docs/screenshots/first-product/app-icon.png" width="120" alt="VoiceSlave icon">
+
 # VoiceSlave
 
-VoiceSlave is a local-first macOS menu bar dictation utility for fast Korean,
-English, and code-mixed dictation. Press a global shortcut anywhere, speak,
-press it again — your words are pasted at the cursor.
+**Press a key. Speak. Your words land at the cursor.**
 
-- **Fast, real dictation**: streaming Apple Speech recognition (on-device when
-  available) with live partial transcripts in the recording pill. No model
-  download, works offline.
-- **Optional Whisper engine**: download the Whisper large-v3 turbo model pack
-  (≈1.6 GB, one-time, Settings → Dictation → Engine) and the inserted text is
-  re-transcribed with Whisper — noticeably better for Korean-English
-  code-mixed speech. Live partials still stream via Apple Speech.
-- **Superwhisper-style UX**: tap the shortcut to toggle, or hold it to talk and
-  release to insert (push-to-talk on the same binding). `esc` cancels.
-- **Zero-permission hotkey**: the global shortcut uses Carbon hotkeys and works
-  before granting anything; mic + speech permissions gate recording, and
-  Accessibility only gates auto-paste (clipboard fallback otherwise).
-- **Bottom-center recording pill**: live waveform, elapsed time, mode chip,
-  live transcript, then `Inserted · 0.8s` feedback. The panel never steals
-  focus from the target app.
-- **Vocabulary & replacements**: case-insensitive deterministic fixes
-  ("보이스 슬레이브" → "VoiceSlave") that are also fed to the recognizer as hints.
-- **History with retention**: searchable local SQLite history (+ optional audio),
-  30-day auto-cleanup by default, one-click delete all.
-- **Optional AI modes**: Cleanup/Prompt post-processing via OpenAI with the key
-  stored in the macOS Keychain; transcript-only payloads, local fallback on
-  failure.
+Local-first macOS dictation for Korean, English, and code-mixed speech —
+living quietly in your menu bar.
 
-The product logic lives in `VoiceSlaveCore` so privacy, mode gating, insertion,
-history, vocabulary, replacement, and latency behavior can be tested without a
-GUI session. The `VoiceSlave` executable provides the AppKit/SwiftUI menu bar
-shell, recording HUD, Settings window, onboarding, and macOS runtime adapters.
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
+![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
+![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-333)
+![Whisper](https://img.shields.io/badge/Whisper-large--v3%20turbo-6D28D9)
+![Privacy](https://img.shields.io/badge/audio-never%20leaves%20your%20Mac-2E7D32)
 
-## Try The App
+<img src="docs/screenshots/first-product/hud-live-transcript.png" width="640" alt="Recording pill with live waveform and streaming Korean transcript">
+
+*Live waveform, elapsed time, and the transcript streaming in — the pill never steals focus from the app you're dictating into.*
+
+</div>
+
+---
+
+## Why VoiceSlave
+
+Dictation tools either ship your voice to a server, ignore Korean, or garble
+sentences that mix 한국어 and English — which is how developers actually talk.
+VoiceSlave is built for exactly that speech, and everything runs on your Mac.
+
+- ⚡ **Instant** — global shortcut (`⌃⌥Space`) or a bare **🌐 fn tap** from any app. Tap to toggle, or hold to talk and release to insert.
+- 🇰🇷 **Korean + English + code-mixed** — with the Whisper engine, "에이피아이 엔드포인트 확인해줘" comes out as *"api 엔드포인트를 확인해 주세요"* — English terms stay in Latin script.
+- 🔒 **Local-first** — streaming recognition is on-device, Whisper runs on-device, history is local SQLite. Audio never leaves your Mac.
+- 🩹 **Self-healing** — if the live session drops your words, the captured audio is automatically re-transcribed before you ever see "no speech detected".
+
+## Features
+
+|  |  |
+| --- | --- |
+| 🎙️ **Streaming dictation** | Apple Speech partials render live in the recording pill — no model download needed to start |
+| 🧠 **Whisper large-v3 turbo** | Optional model pack (≈1.6 GB, one-time in-app download) re-transcribes the final text for superwhisper-class quality |
+| 🌐 **fn key trigger** | Opt-in: tap fn to toggle, hold fn for push-to-talk — fn combos (fn+arrows, fn+F-keys) are left alone |
+| 📋 **Smart insertion** | Auto-paste at the cursor (Accessibility), clipboard fallback without it, or character-typing for paste-hostile apps |
+| 📔 **Vocabulary & replacements** | Deterministic fixes ("보이스 슬레이브" → "VoiceSlave") that are also fed to the recognizer as hints |
+| 🕘 **Local history** | Searchable SQLite history with optional audio, 30-day auto-cleanup, one-click delete all |
+| ✨ **AI modes (optional)** | Cleanup/Prompt post-processing via OpenAI — transcript-only payloads, key in the macOS Keychain, local fallback on failure |
+
+## Quick Start
 
 ```sh
+git clone https://github.com/yansfil/voice-slave.git
+cd voice-slave
 ./scripts/package-app.sh
 ditto dist/VoiceSlave.app /Applications/VoiceSlave.app
 open /Applications/VoiceSlave.app
 ```
 
-Installed in `/Applications`, the app launches from Spotlight like any other app.
+A welcome window walks you through the three permissions, your dictation
+language, and a built-in test field. Then press `⌃⌥Space` in any app and
+start talking. Installed in `/Applications`, the app launches from Spotlight
+like any other app.
 
-A welcome window walks you through permissions on first launch. Then press
-`⌃⌥Space` in any app and start talking. Settings live behind the mic icon in
-the menu bar.
+> **Unsigned build note** — releases aren't notarized yet. If macOS blocks
+> the app, right-click → Open once, or `xattr -dr com.apple.quarantine dist/VoiceSlave.app`.
 
-For the full setup flow, screenshots, permissions, and troubleshooting, read
-[docs/onboarding.md](docs/onboarding.md).
+Full setup, screenshots, and troubleshooting: **[docs/onboarding.md](docs/onboarding.md)**
 
-![Settings](docs/assets/screenshots/settings.png)
+## The Whisper Engine
 
-![Recording pill](docs/assets/screenshots/overlay.png)
+Settings → Dictation → **Engine**:
 
-## Xcode Build
+<img src="docs/screenshots/first-product/engine-whisper.png" width="640" alt="Engine settings with Whisper model pack download">
 
-Install Xcode, open it once, then select it:
+- The pill keeps streaming **live** partials through Apple Speech — zero added latency while you speak.
+- When you stop, the captured audio is re-transcribed by **Whisper large-v3 turbo** (WhisperKit CoreML, fully on-device) and that's what gets inserted.
+- No pack downloaded? Whisper fails? You silently get the streaming transcript instead — dictation never breaks.
+- With language set to *Automatic*, Whisper detects the spoken language on its own.
 
-```sh
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-./scripts/build-xcode.sh
+## The fn Key
+
+Settings → General → **"Also trigger with the 🌐 fn key"**:
+
+<img src="docs/screenshots/first-product/fn-trigger.png" width="640" alt="fn key trigger toggle">
+
+macOS reserves the bare fn key, so this is opt-in: it uses the same
+Accessibility permission as auto-paste, and you set System Settings →
+Keyboard → *"Press 🌐 key to"* → **Do Nothing** so the emoji picker stays
+out of your way.
+
+## Privacy
+
+- Streaming recognition prefers on-device Apple Speech; Whisper is always on-device.
+- The optional OpenAI modes send **transcript text and your explicit vocabulary hints only** — never audio, clipboard, selected text, cursor surroundings, or app names.
+- History (and optional audio) is local SQLite under Application Support, excluded from backups, with retention cleanup.
+
+## Architecture
+
+```
+Sources/
+├── VoiceSlaveCore/          # engine-agnostic core: settings, pipeline
+│                            # (cleanup → replacements → optional AI),
+│                            # SQLite history, vocabulary, insertion, latency
+└── VoiceSlave/              # the app
+    ├── RecordingCoordinator # idle → recording → transcribing → notice
+    ├── SpeechEngine         # AVAudioEngine + SFSpeechRecognizer streaming,
+    │                        # prewarm, file-based re-recognition fallback
+    ├── WhisperEngine        # WhisperKit model pack: download/load/transcribe
+    ├── HotKey               # Carbon global hotkey (zero permissions)
+    │                        # + opt-in fn CGEventTap monitor
+    ├── HUD                  # non-activating bottom-center recording pill
+    └── Settings/Onboarding  # SwiftUI
 ```
 
-For an archived app export:
+The product logic lives in `VoiceSlaveCore` so privacy, mode gating,
+insertion, history, and replacement behavior are tested without a GUI
+session (`./scripts/test.sh`, 16 checks).
+
+## Development
 
 ```sh
-./scripts/archive-xcode.sh
-```
-
-This repository also keeps the SwiftPM path working for agents and machines that
-only have Command Line Tools installed.
-
-## Verification
-
-```sh
-./scripts/build.sh
-./scripts/test.sh
-./scripts/package-app.sh
-./scripts/desktop-qa-smoke.sh
+./scripts/build.sh              # SwiftPM build (Command Line Tools enough)
+./scripts/test.sh               # core test suite
+./scripts/package-app.sh        # dist/VoiceSlave.app (icon + ad-hoc signing)
+./scripts/desktop-qa-smoke.sh   # headless smoke: menu bar/settings/overlay
 ./scripts/measure-warm-latency.sh
 ```
 
-## Architecture Notes
+Xcode users: `./scripts/build-xcode.sh` / `./scripts/archive-xcode.sh`
+(the project file carries the same WhisperKit package reference).
 
-- `Sources/VoiceSlaveCore` — engine-agnostic core: settings, permissions model,
-  dictation pipeline (cleanup → replacements → optional cloud transform),
-  SQLite history with retention, vocabulary store, insertion service, latency
-  math.
-- `Sources/VoiceSlave` — the app: `RecordingCoordinator` state machine
-  (idle → recording → transcribing → notice), `SpeechSession` (AVAudioEngine +
-  SFSpeechRecognizer streaming, level metering, audio capture), Carbon
-  `HotKeyCenter`, non-activating HUD panel, Settings/Onboarding SwiftUI.
-- STT: Apple Speech streams live partials; when the Whisper engine is selected
-  and its model pack (WhisperKit `large-v3-v20240930_turbo`) is downloaded,
-  the final transcript comes from Whisper with the streaming text as fallback.
-  OpenAI post-processing defaults to `gpt-5.4-nano` with `gpt-5.4-mini` as
-  the quality upshift.
+## Roadmap
+
+- [ ] Whisper streaming partials (live text from Whisper, not just the final pass)
+- [ ] Quantized 632 MB model pack option
+- [ ] Developer ID signing + notarization + DMG releases
+- [ ] Per-app language/mode profiles
+
+---
+
+<div align="center">
+Made in Seoul. Speak in any language you think in.
+</div>
