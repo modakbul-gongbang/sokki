@@ -12,6 +12,9 @@ let package = Package(
         .executable(name: "VoiceSlaveCoreTestRunner", targets: ["VoiceSlaveCoreTestRunner"]),
         .library(name: "VoiceSlaveCore", targets: ["VoiceSlaveCore"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0")
+    ],
     targets: [
         .target(
             name: "VoiceSlaveCore",
@@ -21,7 +24,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "VoiceSlave",
-            dependencies: ["VoiceSlaveCore"]
+            dependencies: [
+                "VoiceSlaveCore",
+                .product(name: "WhisperKit", package: "WhisperKit")
+            ]
         ),
         .executableTarget(
             name: "VoiceSlaveCoreTestRunner",

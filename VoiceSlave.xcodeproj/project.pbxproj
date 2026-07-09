@@ -22,6 +22,7 @@
 		A10000000000000000000004 /* VoiceSlaveCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* VoiceSlaveCore.framework */; };
 		A10000000000000000000005 /* VoiceSlaveCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* VoiceSlaveCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000006 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* AppIcon.icns */; };
+		A10000000000000000000007 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AB0000000000000000000002 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +76,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000004 /* VoiceSlaveCore.framework in Frameworks */,
+				A10000000000000000000007 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +172,9 @@
 				A30000000000000000000002 /* PBXTargetDependency */,
 			);
 			name = VoiceSlave;
+			packageProductDependencies = (
+				AB0000000000000000000002 /* WhisperKit */,
+			);
 			productName = VoiceSlave;
 			productReference = A20000000000000000000005 /* VoiceSlave.app */;
 			productType = "com.apple.product-type.application";
@@ -217,6 +222,9 @@
 				Base,
 			);
 			mainGroup = A70000000000000000000001;
+			packageReferences = (
+				AB0000000000000000000001 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			productRefGroup = A70000000000000000000005 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -274,6 +282,25 @@
 			targetProxy = A30000000000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AB0000000000000000000001 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AB0000000000000000000002 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB0000000000000000000001 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A80000000000000000000004 /* Debug */ = {

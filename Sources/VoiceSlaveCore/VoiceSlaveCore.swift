@@ -32,9 +32,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var manualModelOverride: String?
     public var retentionDays: Int?
     public var globalShortcut: String
+    public var fnKeyTrigger: Bool
     public var bundleIdentifier: String
     public var localeIdentifier: String
     public var preferOnDevice: Bool
+    /// "apple" (built-in streaming) or "whisper" (downloaded model pack).
+    public var transcriptionEngine: String
     public var playSounds: Bool
     public var storeAudio: Bool
     public var restoreClipboard: Bool
@@ -50,9 +53,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         manualModelOverride: String? = nil,
         retentionDays: Int? = 30,
         globalShortcut: String = "control+option+space",
+        fnKeyTrigger: Bool = false,
         bundleIdentifier: String = "com.hoyeon.VoiceSlave",
         localeIdentifier: String = "auto",
         preferOnDevice: Bool = true,
+        transcriptionEngine: String = "apple",
         playSounds: Bool = true,
         storeAudio: Bool = true,
         restoreClipboard: Bool = false,
@@ -67,9 +72,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.manualModelOverride = manualModelOverride
         self.retentionDays = retentionDays
         self.globalShortcut = globalShortcut
+        self.fnKeyTrigger = fnKeyTrigger
         self.bundleIdentifier = bundleIdentifier
         self.localeIdentifier = localeIdentifier
         self.preferOnDevice = preferOnDevice
+        self.transcriptionEngine = transcriptionEngine
         self.playSounds = playSounds
         self.storeAudio = storeAudio
         self.restoreClipboard = restoreClipboard
@@ -88,9 +95,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         manualModelOverride = try container.decodeIfPresent(String.self, forKey: .manualModelOverride)
         retentionDays = try container.decodeIfPresent(Int.self, forKey: .retentionDays) ?? defaults.retentionDays
         globalShortcut = try container.decodeIfPresent(String.self, forKey: .globalShortcut) ?? defaults.globalShortcut
+        fnKeyTrigger = try container.decodeIfPresent(Bool.self, forKey: .fnKeyTrigger) ?? defaults.fnKeyTrigger
         bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? defaults.bundleIdentifier
         localeIdentifier = try container.decodeIfPresent(String.self, forKey: .localeIdentifier) ?? defaults.localeIdentifier
         preferOnDevice = try container.decodeIfPresent(Bool.self, forKey: .preferOnDevice) ?? defaults.preferOnDevice
+        transcriptionEngine = try container.decodeIfPresent(String.self, forKey: .transcriptionEngine) ?? defaults.transcriptionEngine
         playSounds = try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? defaults.playSounds
         storeAudio = try container.decodeIfPresent(Bool.self, forKey: .storeAudio) ?? defaults.storeAudio
         restoreClipboard = try container.decodeIfPresent(Bool.self, forKey: .restoreClipboard) ?? defaults.restoreClipboard

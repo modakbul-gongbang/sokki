@@ -67,6 +67,17 @@ private struct GeneralTab: View {
                 Text("Tap to start/stop, or hold to talk and release to insert (push-to-talk). Press esc while recording to cancel.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Toggle("Also trigger with the 🌐 fn key", isOn: $model.state.fnKeyTrigger)
+                if !model.fnTriggerStatus.isEmpty {
+                    Text(model.fnTriggerStatus)
+                        .font(.caption)
+                        .foregroundStyle(model.fnTriggerStatus.hasPrefix("Active") ? Color.secondary : Color.orange)
+                }
+                if model.state.fnKeyTrigger {
+                    Text("Needs the same Accessibility permission as auto-paste. Also set System Settings → Keyboard → \"Press 🌐 key to\" to \"Do Nothing\" so pressing fn doesn't open the emoji picker or switch input sources. fn combos (fn+arrows, fn+F-keys) are ignored.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Section("Behavior") {
                 Toggle("Launch at login", isOn: $model.state.launchAtLogin)
@@ -114,6 +125,9 @@ private struct DictationTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section("Engine") {
+                EngineSection(model: model, whisper: model.whisper)
+            }
             Section("Default mode") {
                 Picker("Mode", selection: $model.state.selectedMode) {
                     ForEach(DictationMode.allCases, id: \.self) { mode in
@@ -142,6 +156,65 @@ private struct DictationTab: View {
         case .dictation: return "Dictation — local, fastest"
         case .cleanup: return "Cleanup — AI fixes punctuation & spacing"
         case .prompt: return "Prompt — AI transforms on request"
+        }
+    }
+}
+
+/// Engine picker + Whisper model-pack download/management.
+private struct EngineSection: View {
+    @ObservedObject var model: AppModel
+    @ObservedObject var whisper: WhisperEngine
+
+    var body: some View {
+        Picker("Transcription engine", selection: $model.state.transcriptionEngine) {
+            Text("Apple Speech — instant, built-in").tag("apple")
+            Text("Whisper large-v3 turbo — best quality, needs model pack").tag("whisper")
+        }
+        .pickerStyle(.radioGroup)
+
+        if model.state.transcriptionEngine == "whisper" {
+            switch whisper.state {
+            case .notDownloaded:
+                LabeledContent("Model pack") {
+                    Button("Download (≈1.6 GB)") { whisper.download() }
+                }
+                Text("Until the pack is downloaded, dictation falls back to Apple Speech. The download is one-time and stays on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .downloading(let progress):
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: progress) {
+                        Text("Downloading Whisper large-v3 turbo… \(Int(progress * 100))%")
+                            .font(.caption)
+                    }
+                }
+            case .downloaded, .loading:
+                LabeledContent("Model pack") {
+                    Text("Loading model…")
+                        .foregroundStyle(.secondary)
+                }
+            case .ready:
+                LabeledContent("Model pack") {
+                    HStack(spacing: 8) {
+                        Label("Ready\(whisper.modelSizeDescription.isEmpty ? "" : " · \(whisper.modelSizeDescription)")", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Button("Delete") { whisper.deleteModel() }
+                    }
+                }
+                Text("Live text in the recording pill still streams via Apple Speech; the inserted result is re-transcribed with Whisper for quality — noticeably better for Korean-English mixed speech.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .failed(let message):
+                LabeledContent("Model pack") {
+                    Button("Retry download") {
+                        whisper.deleteModel()
+                        whisper.download()
+                    }
+                }
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import VoiceSlaveCore
 final class AppModel: ObservableObject {
     private let store = UserDefaultsSettingsStore()
     var onShortcutChanged: ((String) -> Void)?
+    var onFnTriggerChanged: ((Bool) -> Void)?
 
     @Published var state: AppSettings {
         didSet {
@@ -23,16 +24,24 @@ final class AppModel: ObservableObject {
                 prewarmedLocale = nil
                 prewarmRecognizerIfNeeded()
             }
+            if oldValue.fnKeyTrigger != state.fnKeyTrigger {
+                onFnTriggerChanged?(state.fnKeyTrigger)
+            }
+            if oldValue.transcriptionEngine != state.transcriptionEngine {
+                prepareWhisperIfNeeded()
+            }
         }
     }
     private var prewarmedLocale: String?
     @Published var permissions = PermissionSnapshot()
     @Published var apiKeyState: APIKeyState = .absent
     @Published var shortcutRegistrationStatus = ""
+    @Published var fnTriggerStatus = ""
     @Published var launchAtLoginStatus = ""
 
     let history: HistoryStore?
     let vocabulary: VocabularyStore
+    let whisper = WhisperEngine()
     let keychain = KeychainAPIKeyStore()
     private let permissionReader = MacPermissionReader()
 
@@ -46,6 +55,17 @@ final class AppModel: ObservableObject {
         refreshAPIKeyState()
         refreshPermissions()
         applyRetention()
+        prepareWhisperIfNeeded()
+    }
+
+    /// Whether dictation will use the Whisper pack for the final transcript.
+    var usesWhisper: Bool {
+        state.transcriptionEngine == "whisper" && whisper.isReady
+    }
+
+    private func prepareWhisperIfNeeded() {
+        guard state.transcriptionEngine == "whisper" else { return }
+        whisper.loadIfNeeded()
     }
 
     func refreshPermissions() {

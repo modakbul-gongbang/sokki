@@ -10,6 +10,7 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelega
 
     let model = AppModel()
     private let hotKeys = HotKeyCenter()
+    private let fnMonitor = FnKeyMonitor()
     private lazy var coordinator = RecordingCoordinator(model: model, hotKeys: hotKeys)
     private let router = SettingsRouter()
     private let launchArguments = Set(CommandLine.arguments.dropFirst())
@@ -26,9 +27,16 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelega
         model.onShortcutChanged = { [weak self] shortcutText in
             self?.installHotKey(shortcutText)
         }
+        model.onFnTriggerChanged = { [weak self] enabled in
+            self?.applyFnTrigger(enabled)
+        }
+        fnMonitor.onPress = { [weak self] in self?.coordinator.hotKeyPressed() }
+        fnMonitor.onRelease = { [weak self] in self?.coordinator.hotKeyReleased() }
+        fnMonitor.onCombo = { [weak self] in self?.coordinator.cancel() }
 
         installMenuBar()
         installHotKey(model.state.globalShortcut)
+        applyFnTrigger(model.state.fnKeyTrigger)
         updateStatusIcon(.idle)
 
         if launchArguments.contains("--show-settings") {
@@ -60,6 +68,22 @@ final class VoiceSlaveAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelega
         model.shortcutRegistrationStatus = registered
             ? "Active: \(shortcut.compactDisplay)"
             : "Couldn't register \(shortcut.compactDisplay) — it may be taken by another app"
+    }
+
+    private func applyFnTrigger(_ enabled: Bool) {
+        guard enabled else {
+            fnMonitor.stop()
+            model.fnTriggerStatus = ""
+            return
+        }
+        if FnKeyMonitor.hasPermission {
+            model.fnTriggerStatus = fnMonitor.start()
+                ? "Active: 🌐 fn (tap to toggle, hold to talk)"
+                : "Couldn't start the fn key listener — try relaunching VoiceSlave"
+        } else {
+            MacPermissionReader().promptForAccessibility()
+            model.fnTriggerStatus = "Grant Accessibility in System Settings → Privacy & Security, then flip this switch again"
+        }
     }
 
     // MARK: - Menu bar

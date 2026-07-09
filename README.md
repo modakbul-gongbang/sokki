@@ -7,6 +7,10 @@ press it again — your words are pasted at the cursor.
 - **Fast, real dictation**: streaming Apple Speech recognition (on-device when
   available) with live partial transcripts in the recording pill. No model
   download, works offline.
+- **Optional Whisper engine**: download the Whisper large-v3 turbo model pack
+  (≈1.6 GB, one-time, Settings → Dictation → Engine) and the inserted text is
+  re-transcribed with Whisper — noticeably better for Korean-English
+  code-mixed speech. Live partials still stream via Apple Speech.
 - **Superwhisper-style UX**: tap the shortcut to toggle, or hold it to talk and
   release to insert (push-to-talk on the same binding). `esc` cancels.
 - **Zero-permission hotkey**: the global shortcut uses Carbon hotkeys and works
@@ -87,7 +91,8 @@ only have Command Line Tools installed.
   (idle → recording → transcribing → notice), `SpeechSession` (AVAudioEngine +
   SFSpeechRecognizer streaming, level metering, audio capture), Carbon
   `HotKeyCenter`, non-activating HUD panel, Settings/Onboarding SwiftUI.
-- STT is behind the `TranscriptionEngine` boundary; the WhisperKit identifiers
-  (`large-v3-v20240930_turbo` class) remain the planned upgrade path for a
-  bundled-model engine. OpenAI post-processing defaults to `gpt-5.4-nano`
-  with `gpt-5.4-mini` as the quality upshift.
+- STT: Apple Speech streams live partials; when the Whisper engine is selected
+  and its model pack (WhisperKit `large-v3-v20240930_turbo`) is downloaded,
+  the final transcript comes from Whisper with the streaming text as fallback.
+  OpenAI post-processing defaults to `gpt-5.4-nano` with `gpt-5.4-mini` as
+  the quality upshift.

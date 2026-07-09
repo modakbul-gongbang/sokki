@@ -65,6 +65,20 @@ The global shortcut (`⌃⌥Space` by default) works immediately — it needs no
 
 Recognition runs on-device via Apple Speech when available (private, offline). "Automatic" follows the macOS system language — it does not detect the spoken language. If you speak Korean on an English-language Mac, set 한국어 explicitly (onboarding, Settings → Dictation, or the menu bar Language menu).
 
+## Whisper Engine (Optional)
+
+Settings → Dictation → Engine offers **Whisper large-v3 turbo** for the best transcript quality, especially Korean-English mixed speech.
+Click **Download (≈1.6 GB)** once; the pack is stored under Application Support and can be deleted from the same screen.
+While recording, the pill still shows live Apple Speech partials; the inserted text is re-transcribed with Whisper.
+With the language set to Automatic, Whisper detects the spoken language by itself.
+Until the pack is downloaded (or if Whisper fails), dictation falls back to Apple Speech automatically.
+
+## fn (🌐) Key Trigger (Optional)
+
+Settings → General → "Also trigger with the 🌐 fn key" makes a bare fn tap start/stop dictation (hold-to-talk works too).
+It needs the same Accessibility permission as auto-paste, and System Settings → Keyboard → "Press 🌐 key to" should be set to "Do Nothing" to avoid opening the emoji picker.
+fn combos such as fn+arrows or fn+F-keys are ignored and cancel a recording the fn press started.
+
 ## Vocabulary & Replacements
 
 Settings → Vocabulary fixes words the recognizer keeps getting wrong ("보이스 슬레이브" → "VoiceSlave"). Matching is case-insensitive; the replacement is inserted exactly as written. Entries are also fed to the recognizer as vocabulary hints.

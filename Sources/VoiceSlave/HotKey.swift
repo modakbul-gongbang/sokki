@@ -1,6 +1,106 @@
 import AppKit
 import Carbon.HIToolbox
 
+/// Opt-in 🌐/fn-key trigger. The fn key never produces keyDown events and
+/// Carbon hotkeys can't bind it, so this uses a listen-only CGEventTap on
+/// flagsChanged — which requires Input Monitoring permission (unlike the
+/// Carbon path, which needs none). Press = fn down, release = fn up, so
+/// tap-to-toggle and hold-to-talk both work like the main shortcut.
+/// Pressing any other key while fn is down (fn+arrow, fn+F5, …) cancels the
+/// trigger so system fn combos don't dictate.
+@MainActor
+final class FnKeyMonitor {
+    var onPress: (() -> Void)?
+    var onRelease: (() -> Void)?
+    /// Fired instead of onRelease when another key was pressed while fn was
+    /// held — the caller should cancel, not insert.
+    var onCombo: (() -> Void)?
+
+    private var tap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+    private var fnIsDown = false
+    private var sawOtherKey = false
+
+    /// Listen-only keyboard taps are allowed with either Accessibility trust
+    /// (which the app already requests for auto-paste) or Input Monitoring.
+    static var hasPermission: Bool {
+        AXIsProcessTrusted() || CGPreflightListenEventAccess()
+    }
+
+    var isRunning: Bool { tap != nil }
+
+    /// Returns false when Input Monitoring permission is missing.
+    @discardableResult
+    func start() -> Bool {
+        guard tap == nil else { return true }
+        let mask = (1 << CGEventType.flagsChanged.rawValue) | (1 << CGEventType.keyDown.rawValue)
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .listenOnly,
+            eventsOfInterest: CGEventMask(mask),
+            callback: { _, type, event, userInfo in
+                guard let userInfo else { return Unmanaged.passUnretained(event) }
+                let monitor = Unmanaged<FnKeyMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+                let fnFlag = event.flags.contains(.maskSecondaryFn)
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        monitor.handle(type: type, keyCode: keyCode, fnFlag: fnFlag)
+                    }
+                }
+                return Unmanaged.passUnretained(event)
+            },
+            userInfo: Unmanaged.passUnretained(self).toOpaque()
+        ) else {
+            return false
+        }
+        self.tap = tap
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        runLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        return true
+    }
+
+    func stop() {
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        }
+        if let tap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        runLoopSource = nil
+        tap = nil
+        fnIsDown = false
+        sawOtherKey = false
+    }
+
+    private func handle(type: CGEventType, keyCode: Int64, fnFlag: Bool) {
+        switch type {
+        case .flagsChanged where keyCode == Int64(kVK_Function):
+            if fnFlag && !fnIsDown {
+                fnIsDown = true
+                sawOtherKey = false
+                onPress?()
+            } else if !fnFlag && fnIsDown {
+                fnIsDown = false
+                if !sawOtherKey {
+                    onRelease?()
+                }
+                // A combo already cancelled on its keyDown; nothing to do here.
+            }
+        case .keyDown where fnIsDown && !sawOtherKey:
+            sawOtherKey = true
+            onCombo?()
+        case .tapDisabledByTimeout, .tapDisabledByUserInput:
+            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+        default:
+            break
+        }
+    }
+}
+
 /// System-wide hotkeys via Carbon `RegisterEventHotKey`, which works without
 /// Accessibility/Input Monitoring permission (unlike NSEvent global monitors).
 /// Delivers both press and release so callers can implement

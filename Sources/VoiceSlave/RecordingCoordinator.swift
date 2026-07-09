@@ -120,7 +120,10 @@ final class RecordingCoordinator: ObservableObject {
         }
 
         var audioFileURL: URL?
-        if model.state.storeAudio, let history = model.history {
+        // The Whisper engine transcribes from the captured file, so capture
+        // even when the user doesn't keep audio in history (deleted after).
+        if model.state.storeAudio || model.state.transcriptionEngine == "whisper",
+           let history = model.history {
             audioFileURL = history.audioDirectory.appendingPathComponent("\(UUID().uuidString).caf")
         }
         let contextualStrings = model.loadVocabulary().map(\.preferredSpelling)
@@ -180,6 +183,19 @@ final class RecordingCoordinator: ObservableObject {
         let audioFileURL = session.audioFileURL
         self.session = nil
 
+        if model.usesWhisper, let audioFileURL,
+           FileManager.default.fileExists(atPath: audioFileURL.path) {
+            // Whisper replaces the streaming transcript when it succeeds;
+            // the Apple Speech text stays as the fallback.
+            let whisperText = await model.whisper.transcribe(
+                url: audioFileURL,
+                localeIdentifier: model.state.localeIdentifier
+            )
+            if !whisperText.isEmpty {
+                rawTranscript = whisperText
+            }
+        }
+
         if rawTranscript.isEmpty, let audioFileURL,
            FileManager.default.fileExists(atPath: audioFileURL.path) {
             // The streaming session can come back empty (notably speechd's
@@ -197,6 +213,11 @@ final class RecordingCoordinator: ObservableObject {
             }
             showNotice(.info, message: "No speech detected", sound: "Basso")
             return
+        }
+
+        if !model.state.storeAudio, let audioFileURL {
+            // Captured only for the Whisper engine — don't keep it around.
+            try? FileManager.default.removeItem(at: audioFileURL)
         }
 
         let vocabulary = model.loadVocabulary()
