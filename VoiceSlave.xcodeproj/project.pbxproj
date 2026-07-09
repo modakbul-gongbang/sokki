@@ -21,6 +21,7 @@
 		A10000000000000000000003 /* VoiceSlaveCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* VoiceSlaveCore.swift */; };
 		A10000000000000000000004 /* VoiceSlaveCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* VoiceSlaveCore.framework */; };
 		A10000000000000000000005 /* VoiceSlaveCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* VoiceSlaveCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000006 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* AppIcon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +66,7 @@
 		A20000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000007 /* VoiceSlave.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VoiceSlave.entitlements; sourceTree = "<group>"; };
 		A20000000000000000000008 /* ExportOptions.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ExportOptions.plist; sourceTree = "<group>"; };
+		A20000000000000000000009 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,6 +147,7 @@
 				A20000000000000000000006 /* Info.plist */,
 				A20000000000000000000007 /* VoiceSlave.entitlements */,
 				A20000000000000000000008 /* ExportOptions.plist */,
+				A20000000000000000000009 /* AppIcon.icns */,
 			);
 			path = AppResources;
 			sourceTree = "<group>";
@@ -159,6 +162,7 @@
 				A60000000000000000000001 /* Frameworks */,
 				A50000000000000000000001 /* Embed Frameworks */,
 				A60000000000000000000003 /* Sources */,
+				A60000000000000000000005 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -222,6 +226,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A60000000000000000000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000006 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A60000000000000000000003 /* Sources */ = {

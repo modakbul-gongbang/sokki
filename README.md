@@ -32,8 +32,11 @@ shell, recording HUD, Settings window, onboarding, and macOS runtime adapters.
 
 ```sh
 ./scripts/package-app.sh
-open dist/VoiceSlave.app
+ditto dist/VoiceSlave.app /Applications/VoiceSlave.app
+open /Applications/VoiceSlave.app
 ```
+
+Installed in `/Applications`, the app launches from Spotlight like any other app.
 
 A welcome window walks you through permissions on first launch. Then press
 `⌃⌥Space` in any app and start talking. Settings live behind the mic icon in

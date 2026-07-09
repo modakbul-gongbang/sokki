@@ -33,4 +33,11 @@ cat > "$APP_DIR/Contents/PkgInfo" <<'EOF'
 APPL????
 EOF
 
+cp AppResources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
+
+codesign --force --sign - \
+  --entitlements AppResources/VoiceSlave.entitlements \
+  --identifier com.hoyeon.VoiceSlave \
+  "$APP_DIR"
+
 echo "$APP_DIR"

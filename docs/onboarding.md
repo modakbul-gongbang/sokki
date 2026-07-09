@@ -10,8 +10,11 @@ Use this when you want to try the app immediately on a development Mac.
 
 ```sh
 ./scripts/package-app.sh
-open dist/VoiceSlave.app
+ditto dist/VoiceSlave.app /Applications/VoiceSlave.app
+open /Applications/VoiceSlave.app
 ```
+
+Installing into `/Applications` lets you launch VoiceSlave from Spotlight (`⌘Space`, type "VoiceSlave") like any other app.
 
 If macOS blocks the unsigned app, right-click `dist/VoiceSlave.app`, choose Open, and confirm. For a local development checkout you can also remove quarantine:
 
@@ -43,7 +46,8 @@ Signing, notarization, and DMG packaging are intentionally separate release step
 1. Launch `VoiceSlave.app`. A welcome window opens automatically on first run.
 2. Grant **Microphone** and **Speech Recognition** when prompted — these are required to dictate.
 3. Grant **Accessibility** so results are pasted directly at your cursor. Without it, results are copied to the clipboard instead (the HUD tells you to press ⌘V).
-4. Try a dictation in the built-in test field, then click **Start using VoiceSlave**.
+4. Pick your dictation language — Automatic (system), 한국어, or English (US).
+5. Try a dictation in the built-in test field, then click **Start using VoiceSlave**.
 
 The global shortcut (`⌃⌥Space` by default) works immediately — it needs no permissions at all.
 
@@ -59,7 +63,7 @@ The global shortcut (`⌃⌥Space` by default) works immediately — it needs no
 
 ![Recording pill](assets/screenshots/overlay.png)
 
-Recognition runs on-device via Apple Speech when available (private, offline). Set the language explicitly in Settings → Dictation if you don't want the system locale — 한국어, English, 日本語, and more.
+Recognition runs on-device via Apple Speech when available (private, offline). "Automatic" follows the macOS system language — it does not detect the spoken language. If you speak Korean on an English-language Mac, set 한국어 explicitly (onboarding, Settings → Dictation, or the menu bar Language menu).
 
 ## Vocabulary & Replacements
 
