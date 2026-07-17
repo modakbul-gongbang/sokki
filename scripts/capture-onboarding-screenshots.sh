@@ -6,7 +6,7 @@ mkdir -p "$OUT_DIR"
 
 APP_PATH="$(./scripts/package-app.sh | tail -n 1)"
 
-"$APP_PATH/Contents/MacOS/Sokki" --show-settings > /tmp/voiceslave-settings.log 2>&1 &
+"$APP_PATH/Contents/MacOS/Sokki" --show-settings > /tmp/sokki-settings.log 2>&1 &
 pid=$!
 sleep 2.5
 screencapture -x "$OUT_DIR/settings-full.png"
@@ -15,7 +15,7 @@ rm -f "$OUT_DIR/settings-full.png"
 kill "$pid" 2>/dev/null || true
 wait "$pid" 2>/dev/null || true
 
-"$APP_PATH/Contents/MacOS/Sokki" --show-overlay > /tmp/voiceslave-overlay.log 2>&1 &
+"$APP_PATH/Contents/MacOS/Sokki" --show-overlay > /tmp/sokki-overlay.log 2>&1 &
 pid=$!
 sleep 2.5
 screencapture -x "$OUT_DIR/overlay-full.png"
