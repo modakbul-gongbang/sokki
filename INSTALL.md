@@ -38,10 +38,12 @@ gh release download --repo yansfil/sokki --pattern "*.dmg" || {
 }
 DMG="$(ls *.dmg | head -1)"
 MOUNT="$(hdiutil attach "$DMG" -nobrowse | awk -F'\t' '/\/Volumes\//{print $NF}' | head -1)"
+osascript -e 'quit app "Sokki"' 2>/dev/null; sleep 1
 rm -rf /Applications/Sokki.app
 ditto "$MOUNT/Sokki.app" /Applications/Sokki.app
 hdiutil detach "$MOUNT" >/dev/null
 xattr -dr com.apple.quarantine /Applications/Sokki.app
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Sokki.app
 open /Applications/Sokki.app
 ```
 
@@ -61,8 +63,10 @@ else
 fi
 cd "$INSTALL_DIR"
 ./scripts/package-app.sh
+osascript -e 'quit app "Sokki"' 2>/dev/null; sleep 1
 rm -rf /Applications/Sokki.app
 ditto dist/Sokki.app /Applications/Sokki.app
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Sokki.app
 open /Applications/Sokki.app
 ```
 
@@ -109,7 +113,13 @@ toggles dictation; holding fn works as push-to-talk.
 pgrep -fl "/Applications/Sokki.app" || echo "NOT RUNNING"
 mdfind "kMDItemKind == 'Application' && kMDItemDisplayName == 'Sokki'" | grep -q /Applications/Sokki.app && echo "Spotlight OK"
 codesign -dv /Applications/Sokki.app 2>&1 | grep Identifier
+codesign -dr - /Applications/Sokki.app 2>&1 | grep -q 'designated => identifier "com.hoyeon.Sokki"' && echo "Stable signature OK"
 ```
+
+Spotlight indexing of a fresh install can lag a few seconds; if the `mdfind`
+line fails, wait and retry once before treating it as a failure.
+Then ask the user to confirm the microphone icon is visible in the menu bar
+(top-right status area) — that icon is the whole UI, there is no Dock icon.
 
 Then confirm with the user that a real dictation works: cursor into any text
 field, `⌃⌥Space`, speak, `⌃⌥Space` — the text should appear at the cursor
@@ -122,5 +132,5 @@ was skipped).
 - **"Sokki is damaged / can't be opened"** — quarantine on an unsigned build: `xattr -dr com.apple.quarantine /Applications/Sokki.app`.
 - **Shortcut does nothing** — another app may own `⌃⌥Space`; rebind in Settings → General.
 - **Waveform flat while recording** — Microphone permission missing, or the wrong input device is selected in macOS Sound settings.
-- **Permission shows Denied after reinstalling/rebuilding** — ad-hoc signatures change per build, which invalidates old TCC grants. Remove Sokki from the permission list in System Settings and grant it again (or `tccutil reset Accessibility com.hoyeon.Sokki` first).
+- **Permission shows Denied after reinstalling/rebuilding** — builds now pin the signature's designated requirement to the bundle identifier, so grants survive rebuilds. Upgrading from an older per-build (cdhash) signed install can still invalidate old grants once: remove Sokki from the permission list in System Settings and grant it again (or `tccutil reset Accessibility com.hoyeon.Sokki` first).
 - **First dictation came back empty** — should not happen (the app prewarms the recognizer and re-transcribes captured audio), but if it does, check `log show --predicate 'subsystem == "com.hoyeon.Sokki"' --info --last 5m`.

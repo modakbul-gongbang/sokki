@@ -39,9 +39,18 @@ fi
 
 cp AppResources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
 
+# Pin the ad-hoc signature's designated requirement to the bundle identifier
+# instead of the default per-build cdhash, so macOS TCC grants (Microphone,
+# Accessibility, Speech Recognition) survive rebuilds and upgrades.
 codesign --force --sign - \
   --entitlements AppResources/Sokki.entitlements \
   --identifier com.hoyeon.Sokki \
+  --requirements '=designated => identifier "com.hoyeon.Sokki"' \
   "$APP_DIR"
+codesign --verify --strict "$APP_DIR"
+if ! codesign -dr - "$APP_DIR" 2>&1 | grep -q 'designated => identifier "com.hoyeon.Sokki"'; then
+  echo "Sokki code-signing identity is not stable." >&2
+  exit 1
+fi
 
 echo "$APP_DIR"
