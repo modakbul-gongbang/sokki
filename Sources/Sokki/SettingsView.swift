@@ -72,6 +72,14 @@ private struct GeneralTab: View {
                     Text(model.fnTriggerStatus)
                         .font(.caption)
                         .foregroundStyle(model.fnTriggerStatus.hasPrefix("Active") ? Color.secondary : Color.orange)
+                    if !model.fnTriggerStatus.hasPrefix("Active") {
+                        Button("Open Accessibility Settings") {
+                            MacPermissionReader().openAccessibilitySettings()
+                        }
+                        Text("Already shows as enabled there? Remove Sokki from the list with − and add it back — reinstalling the app invalidates the old entry.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if model.state.fnKeyTrigger {
                     Text("Needs the same Accessibility permission as auto-paste. Also set System Settings → Keyboard → \"Press 🌐 key to\" to \"Do Nothing\" so pressing fn doesn't open the emoji picker or switch input sources. fn combos (fn+arrows, fn+F-keys) are ignored.")
@@ -537,6 +545,11 @@ struct PermissionsSection: View {
                 model.refreshPermissions()
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
             }
+        }
+        if model.permissions.accessibility == .denied {
+            Text("Shows as enabled in System Settings but still not working? Remove Sokki from the Accessibility list with − and add it back — reinstalling the app invalidates the old entry.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

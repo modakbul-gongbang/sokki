@@ -14,6 +14,7 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var coordinator = RecordingCoordinator(model: model, hotKeys: hotKeys)
     private let router = SettingsRouter()
     private let launchArguments = Set(CommandLine.arguments.dropFirst())
+    private var fnPermissionWaiter: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -71,6 +72,8 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func applyFnTrigger(_ enabled: Bool) {
+        fnPermissionWaiter?.invalidate()
+        fnPermissionWaiter = nil
         guard enabled else {
             fnMonitor.stop()
             model.fnTriggerStatus = ""
@@ -82,8 +85,32 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 : "Couldn't start the fn key listener — try relaunching Sokki"
         } else {
             MacPermissionReader().promptForAccessibility()
-            model.fnTriggerStatus = "Grant Accessibility in System Settings → Privacy & Security, then flip this switch again"
+            model.fnTriggerStatus = "Waiting for Accessibility permission — the fn trigger activates automatically once granted"
+            startFnPermissionWaiter()
         }
+    }
+
+    /// Accessibility trust is often granted (or re-granted after a reinstall)
+    /// while the app is already running; poll until it appears so the fn
+    /// trigger recovers without a relaunch or toggle flip.
+    private func startFnPermissionWaiter() {
+        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    guard self.model.state.fnKeyTrigger, !self.fnMonitor.isRunning else {
+                        self.fnPermissionWaiter?.invalidate()
+                        self.fnPermissionWaiter = nil
+                        return
+                    }
+                    if FnKeyMonitor.hasPermission {
+                        self.applyFnTrigger(true)
+                    }
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        fnPermissionWaiter = timer
     }
 
     // MARK: - Menu bar
@@ -115,6 +142,17 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let cancelItem = NSMenuItem(title: "Cancel Dictation", action: #selector(cancelDictation), keyEquivalent: "")
             cancelItem.target = self
             menu.addItem(cancelItem)
+        }
+
+        if model.state.fnKeyTrigger && !fnMonitor.isRunning {
+            let fixItem = NSMenuItem(
+                title: "🌐 fn trigger is off — Grant Accessibility…",
+                action: #selector(fixFnPermission),
+                keyEquivalent: ""
+            )
+            fixItem.target = self
+            fixItem.image = statusSymbol("exclamationmark.triangle.fill", color: .systemOrange)
+            menu.addItem(fixItem)
         }
 
         menu.addItem(.separator())
@@ -233,6 +271,16 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func cancelDictation() {
         coordinator.cancel()
+    }
+
+    @objc private func fixFnPermission() {
+        let reader = MacPermissionReader()
+        reader.promptForAccessibility()
+        reader.openAccessibilitySettings()
+        // The waiter picks the grant up and starts the listener automatically.
+        if fnPermissionWaiter == nil {
+            startFnPermissionWaiter()
+        }
     }
 
     @objc private func selectMode(_ sender: NSMenuItem) {
