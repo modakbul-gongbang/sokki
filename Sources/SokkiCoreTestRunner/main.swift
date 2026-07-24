@@ -137,6 +137,31 @@ let tests: [(String, () throws -> Void)] = [
         try store.delete(id: recent.id)
         try require(try store.all().isEmpty, "delete did not remove row")
     }),
+    ("orphaned audio sweep removes unreferenced old files only", {
+        let root = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try HistoryStore(root: root)
+        let record = HistoryRecord(
+            rawTranscript: "kept",
+            finalOutput: "kept",
+            mode: .dictation,
+            status: .inserted,
+            audioFileName: "kept.caf"
+        )
+        try store.add(record, audioData: Data("fixture-audio".utf8))
+        let oldOrphan = store.audioDirectory.appendingPathComponent("orphan-old.caf")
+        let freshOrphan = store.audioDirectory.appendingPathComponent("orphan-fresh.caf")
+        try Data("orphan".utf8).write(to: oldOrphan)
+        try Data("orphan".utf8).write(to: freshOrphan)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSinceNow: -7200)],
+            ofItemAtPath: oldOrphan.path
+        )
+        try require(try store.sweepOrphanedAudio() == 1, "sweep should remove exactly the old orphan")
+        try require(!FileManager.default.fileExists(atPath: oldOrphan.path), "old orphan survived sweep")
+        try require(FileManager.default.fileExists(atPath: freshOrphan.path), "fresh file must be kept (in-flight dictation)")
+        try require(FileManager.default.fileExists(atPath: store.audioDirectory.appendingPathComponent("kept.caf").path), "referenced audio must be kept")
+    }),
     ("history SQLite opens paths with spaces and unicode", {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("Voice Slave Tests 한글 \(UUID().uuidString)", isDirectory: true)

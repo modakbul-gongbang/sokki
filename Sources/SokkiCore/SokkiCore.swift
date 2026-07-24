@@ -24,16 +24,12 @@ public enum PermissionState: String, Codable, Sendable {
 
 public struct AppSettings: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool
-    public var preloadModel: Bool
     public var typingModeEnabled: Bool
     public var selectedMode: DictationMode
     public var openAIModel: String
-    public var qualityModel: String
-    public var manualModelOverride: String?
     public var retentionDays: Int?
     public var globalShortcut: String
     public var fnKeyTrigger: Bool
-    public var bundleIdentifier: String
     public var localeIdentifier: String
     public var preferOnDevice: Bool
     /// "apple" (built-in streaming) or "whisper" (downloaded model pack).
@@ -45,16 +41,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     public init(
         launchAtLogin: Bool = true,
-        preloadModel: Bool = true,
         typingModeEnabled: Bool = false,
         selectedMode: DictationMode = .dictation,
         openAIModel: String = OpenAIModelDefaults.defaultModel,
-        qualityModel: String = OpenAIModelDefaults.qualityModel,
-        manualModelOverride: String? = nil,
         retentionDays: Int? = 30,
         globalShortcut: String = "control+option+space",
         fnKeyTrigger: Bool = false,
-        bundleIdentifier: String = "com.hoyeon.Sokki",
         localeIdentifier: String = "auto",
         preferOnDevice: Bool = true,
         transcriptionEngine: String = "apple",
@@ -64,16 +56,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         hasCompletedOnboarding: Bool = false
     ) {
         self.launchAtLogin = launchAtLogin
-        self.preloadModel = preloadModel
         self.typingModeEnabled = typingModeEnabled
         self.selectedMode = selectedMode
         self.openAIModel = openAIModel
-        self.qualityModel = qualityModel
-        self.manualModelOverride = manualModelOverride
         self.retentionDays = retentionDays
         self.globalShortcut = globalShortcut
         self.fnKeyTrigger = fnKeyTrigger
-        self.bundleIdentifier = bundleIdentifier
         self.localeIdentifier = localeIdentifier
         self.preferOnDevice = preferOnDevice
         self.transcriptionEngine = transcriptionEngine
@@ -87,16 +75,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = AppSettings()
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? defaults.launchAtLogin
-        preloadModel = try container.decodeIfPresent(Bool.self, forKey: .preloadModel) ?? defaults.preloadModel
         typingModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .typingModeEnabled) ?? defaults.typingModeEnabled
         selectedMode = try container.decodeIfPresent(DictationMode.self, forKey: .selectedMode) ?? defaults.selectedMode
         openAIModel = try container.decodeIfPresent(String.self, forKey: .openAIModel) ?? defaults.openAIModel
-        qualityModel = try container.decodeIfPresent(String.self, forKey: .qualityModel) ?? defaults.qualityModel
-        manualModelOverride = try container.decodeIfPresent(String.self, forKey: .manualModelOverride)
         retentionDays = try container.decodeIfPresent(Int.self, forKey: .retentionDays) ?? defaults.retentionDays
         globalShortcut = try container.decodeIfPresent(String.self, forKey: .globalShortcut) ?? defaults.globalShortcut
         fnKeyTrigger = try container.decodeIfPresent(Bool.self, forKey: .fnKeyTrigger) ?? defaults.fnKeyTrigger
-        bundleIdentifier = try container.decodeIfPresent(String.self, forKey: .bundleIdentifier) ?? defaults.bundleIdentifier
         localeIdentifier = try container.decodeIfPresent(String.self, forKey: .localeIdentifier) ?? defaults.localeIdentifier
         preferOnDevice = try container.decodeIfPresent(Bool.self, forKey: .preferOnDevice) ?? defaults.preferOnDevice
         transcriptionEngine = try container.decodeIfPresent(String.self, forKey: .transcriptionEngine) ?? defaults.transcriptionEngine
@@ -109,7 +93,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
 public enum OpenAIModelDefaults {
     public static let defaultModel = "gpt-5.4-nano"
-    public static let qualityModel = "gpt-5.4-mini"
 }
 
 public enum WhisperModelDefaults {
@@ -392,6 +375,30 @@ public final class HistoryStore: @unchecked Sendable {
         return expired.count
     }
 
+    /// Deletes audio files no history record references. Crashed or
+    /// unrecorded dictations otherwise leak their .caf forever, because
+    /// retention only deletes through records. Files younger than `minAge`
+    /// are kept — a dictation in progress has a file but no record yet.
+    @discardableResult
+    public func sweepOrphanedAudio(minAge: TimeInterval = 3600, now: Date = Date()) throws -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        let referenced = Set(try all().map(\.audioFileName).filter { !$0.isEmpty })
+        let onDisk = (try? FileManager.default.contentsOfDirectory(
+            at: audioDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        )) ?? []
+        var removed = 0
+        for url in onDisk where !referenced.contains(url.lastPathComponent) {
+            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
+            guard now.timeIntervalSince(modified) >= minAge else { continue }
+            try? FileManager.default.removeItem(at: url)
+            removed += 1
+        }
+        return removed
+    }
+
     public static func excludeFromBackup(_ url: URL) throws {
         var mutableURL = url
         var values = URLResourceValues()
@@ -496,21 +503,15 @@ public struct OpenAIRequest: Equatable {
 
 public struct OpenAIRequestBuilder: Sendable {
     public var defaultModel: String
-    public var qualityModel: String
 
-    public init(
-        defaultModel: String = OpenAIModelDefaults.defaultModel,
-        qualityModel: String = OpenAIModelDefaults.qualityModel
-    ) {
+    public init(defaultModel: String = OpenAIModelDefaults.defaultModel) {
         self.defaultModel = defaultModel
-        self.qualityModel = qualityModel
     }
 
     public func build(
         mode: DictationMode,
         rawTranscript: String,
         vocabulary: [VocabularyEntry],
-        manualModelOverride: String? = nil,
         timeoutSeconds: TimeInterval = 12
     ) -> OpenAIRequest? {
         guard mode != .dictation else { return nil }
@@ -533,13 +534,12 @@ public struct OpenAIRequestBuilder: Sendable {
         ]
         .compactMap { $0 }
         .joined(separator: "\n\n")
-        let model = manualModelOverride?.isEmpty == false ? manualModelOverride! : defaultModel
         return OpenAIRequest(
-            model: model,
+            model: defaultModel,
             input: input,
             timeoutSeconds: timeoutSeconds,
             body: [
-                "model": model,
+                "model": defaultModel,
                 "input": input,
                 "max_output_tokens": 900
             ]

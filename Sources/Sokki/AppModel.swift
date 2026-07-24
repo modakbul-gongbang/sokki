@@ -93,6 +93,7 @@ final class AppModel: ObservableObject {
     func applyRetention() {
         guard let history else { return }
         _ = try? history.applyRetention(days: state.retentionDays)
+        _ = try? history.sweepOrphanedAudio()
     }
 
     func resetShortcut() {

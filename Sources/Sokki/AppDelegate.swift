@@ -3,7 +3,7 @@ import SwiftUI
 import SokkiCore
 
 @MainActor
-final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
@@ -46,9 +46,11 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if launchArguments.contains("--show-overlay") {
             coordinator.showHUDPreview()
         }
+        if launchArguments.contains("--show-onboarding") {
+            openOnboarding()
+        }
         if !model.state.hasCompletedOnboarding
-            && !launchArguments.contains("--show-settings")
-            && !launchArguments.contains("--show-overlay") {
+            && launchArguments.isDisjoint(with: ["--show-settings", "--show-overlay", "--show-onboarding"]) {
             openOnboarding()
         }
     }
@@ -340,14 +342,18 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func openOnboarding() {
         if onboardingWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
+                contentRect: NSRect(x: 0, y: 0, width: 560, height: 720),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
             window.isReleasedWhenClosed = false
             window.title = "Welcome to Sokki"
-            window.contentView = NSHostingView(rootView: OnboardingView(model: model) { [weak self] in
+            // Keep the guide visible while system permission dialogs and
+            // System Settings take focus away during setup.
+            window.level = .floating
+            window.delegate = self
+            window.contentView = NSHostingView(rootView: SetupGuideView(model: model) { [weak self] in
                 self?.onboardingWindow?.close()
             })
             window.center()
@@ -356,5 +362,12 @@ final class SokkiAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.refreshPermissions()
         onboardingWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        // Closing the welcome window counts as finishing onboarding either
+        // way; otherwise it would reopen on every launch.
+        guard let window = notification.object as? NSWindow, window == onboardingWindow else { return }
+        model.state.hasCompletedOnboarding = true
     }
 }

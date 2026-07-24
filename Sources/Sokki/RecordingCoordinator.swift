@@ -38,7 +38,6 @@ final class RecordingCoordinator: ObservableObject {
     private let hotKeys: HotKeyCenter
     private lazy var hud = HUDController(coordinator: self)
     private let pipeline = DictationPipeline()
-    private let requestBuilder = OpenAIRequestBuilder()
     private let openAI = OpenAIClient()
 
     private var session: SpeechSession?
@@ -231,11 +230,10 @@ final class RecordingCoordinator: ObservableObject {
         if mode == .dictation {
             // Local-only path already final.
         } else if let apiKey = (try? model.keychain.read()) ?? nil, !apiKey.isEmpty {
-            if let request = requestBuilder.build(
+            if let request = OpenAIRequestBuilder(defaultModel: model.state.openAIModel).build(
                 mode: mode,
                 rawTranscript: rawTranscript,
-                vocabulary: vocabulary,
-                manualModelOverride: model.state.manualModelOverride
+                vocabulary: vocabulary
             ) {
                 do {
                     let transformed = try await openAI.transform(request, apiKey: apiKey)

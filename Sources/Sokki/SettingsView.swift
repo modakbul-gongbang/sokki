@@ -454,9 +454,11 @@ private struct AIModesTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Section("Models") {
-                TextField("Default model", text: $model.state.openAIModel)
-                TextField("Quality model", text: $model.state.qualityModel)
+            Section("Model") {
+                TextField("OpenAI model", text: $model.state.openAIModel)
+                Text("Used for Cleanup and Prompt modes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Mode availability") {
                 ForEach([DictationMode.cleanup, .prompt], id: \.self) { mode in
@@ -483,17 +485,7 @@ struct SetupTab: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        Form {
-            Section("Permissions") {
-                PermissionsSection(model: model)
-            }
-            Section {
-                Text("The global shortcut works without any permissions. Microphone + Speech Recognition are needed to dictate; Accessibility lets Sokki paste the result directly at your cursor. Without Accessibility, results are copied to the clipboard instead.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
+        SetupGuideView(model: model, onDone: nil)
     }
 }
 
@@ -511,6 +503,9 @@ struct PermissionsSection: View {
             Task {
                 _ = await SpeechPermissions.requestMicrophone()
                 model.refreshPermissions()
+                // The system permission dialog deactivated us; come back so
+                // the window doesn't vanish behind other apps mid-setup.
+                NSApp.activate(ignoringOtherApps: true)
             }
         } openSettings: {
             reader.openMicrophoneSettings()
@@ -524,6 +519,7 @@ struct PermissionsSection: View {
             Task {
                 _ = await SpeechPermissions.requestSpeechRecognition()
                 model.refreshPermissions()
+                NSApp.activate(ignoringOtherApps: true)
             }
         } openSettings: {
             reader.openSpeechRecognitionSettings()
@@ -540,9 +536,16 @@ struct PermissionsSection: View {
             reader.openAccessibilitySettings()
         }
         .task {
-            // Accessibility trust can change outside the app; poll while visible.
+            // Accessibility trust can change outside the app; poll while visible
+            // and pull the user back from System Settings once it's granted.
+            var wasGranted = model.permissions.accessibility == .granted
             while !Task.isCancelled {
                 model.refreshPermissions()
+                let granted = model.permissions.accessibility == .granted
+                if granted && !wasGranted {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                wasGranted = granted
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
             }
         }
